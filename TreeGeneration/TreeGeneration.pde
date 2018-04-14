@@ -1,8 +1,18 @@
+import ddf.minim.*;
+import ddf.minim.analysis.*;
+import javax.swing.JFileChooser;
+import java.util.Iterator;
+
 //Objects to create trees
 
 //Global test values. These are used before any FFT object are added
-float theta = radians(45f);   
 
+boolean newsession;
+AudioPlayer song;
+Minim minim;
+FFT fft;
+
+float theta = radians(45f);   
 
 int numberoflevels =10;
 float[] heights= new float[(int) pow(2,numberoflevels+1)];
@@ -15,10 +25,29 @@ branch b_head;
 
 void setup(){
   size(640, 360);
+   minim = new Minim(this);
   b_head = new branch(null,0);
+  newsession = true;
 }
 
 void draw(){
+  if(newsession){
+    JFileChooser chooser = new JFileChooser();
+    int returnValue = chooser.showOpenDialog(null);
+    if(returnValue == JFileChooser.APPROVE_OPTION){
+      File file = chooser.getSelectedFile();
+      song = minim.loadFile(file.getAbsolutePath(),(int) pow(2,numberoflevels+1));  
+    }
+    song.play();
+    newsession = false;
+    fft = new FFT(song.bufferSize(), song.sampleRate());
+    println("HELLO" + song.bufferSize()+"YA"+ song.sampleRate() +" YA" + song.sampleRate()/song.bufferSize() );
+  }
+  
+  fft.forward(song.mix);
+  
+  //println(fft.specSize());
+  
   background(0);
   frameRate(30);
   stroke(255);
@@ -28,15 +57,15 @@ void draw(){
   
   //Random Heights
   for(int i = 0; i < (int) pow(2,numberoflevels+1); i++){
-    heights[i] = random(.5,.9);
+    heights[i] = 120; //1 + fft.getBand(i);//random(.5,.9);
   }
   height_index = 0;
-  b_head.set_height(heights);
+  b_head.set_height(heights,0,(int) pow(2,numberoflevels+1));
   height_index = 0;
   //
   //Random Heights
   for(int i = 0; i < (int) pow(2,numberoflevels+1); i++){
-    angles[i] = (360/(2*PI))*(random(0,90));
+    angles[i] = (360/(2*PI))*(15);//random(0,90));
   }
   angle_index = 0;
   b_head.set_angles(angles);
@@ -58,6 +87,9 @@ void draw(){
 
 color random_color(){
  return color((int) random(0,255), (int) random(0,255), (int) random(0,255));
+}
+color get_color(int index){
+  
 }
 
 class branch{ //Significes specific branch of an object\
@@ -104,14 +136,19 @@ class branch{ //Significes specific branch of an object\
     }
     popMatrix();
   }
-  void set_height(float[] heights){
+  void set_height(float[] heights,int lower,int upper){
    if(parent != null){
-     this.b_height = parent.b_height* heights[height_index];
+     int sum = 0;
+     for(int i = lower; i < upper; i++){
+      sum += heights[i]; 
+     }
+     sum /= (lower+upper);
+     this.b_height = sum;
    }
    height_index++;
    if(nextleft != null){
-     nextleft.set_height(heights);
-     nextright.set_height(heights);
+     nextleft.set_height(heights,lower, (lower+upper)/2);
+     nextright.set_height(heights,(lower+upper)/2, upper);
    }
   }
   void set_angles(float[] angles){
