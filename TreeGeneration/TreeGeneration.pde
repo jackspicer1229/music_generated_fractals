@@ -47,11 +47,7 @@ void setup() {
   b_root = new branch(null, 0, 0);
   newsession = true;
   currentTheta = 0;
-}
-
-void draw() {
-  background(0);
-  frameRate(60);
+  
   //camera(mouseX, height/2, (height/2) / tan(PI/6), width/2, height/2, 0, 0, 1, 0);
 
   if (newsession) {
@@ -70,6 +66,12 @@ void draw() {
     newsession = false;
     fft = new FFT(song.bufferSize(), song.sampleRate()); //Begins new fft sessions
   }
+}
+
+void draw() {
+  background(0);
+  frameRate(60);
+  
   fft.forward(song.mix); //step the fft to the next song frame
 
   branch_heights(); //Calculate all branch heights
@@ -100,6 +102,7 @@ color random_color() {
   return color((int) random(0, 255), (int) random(0, 255), (int) random(0, 255));
 }
 color get_color(double freq) {
+  freq = freq/100;
   return color((int) (Math.sin(freq)* 127 + 128), (int) (Math.sin(freq+((2*Math.PI)/2)) * 127 + 128), (int) (Math.sin(freq+(Math.PI/2)) * 127 + 128));
 }
 
