@@ -12,197 +12,145 @@ AudioPlayer song;
 Minim minim;
 FFT fft;
 
-float theta = radians(45f);   
 
-int numberoflevels =10;
-float[] heights= new float[(int) pow(2,numberoflevels+1)];
-color[] colors= new color[(int) pow(2,numberoflevels+1)];
-float[] angles = new float[(int) pow(2,numberoflevels+1)];
+//UNIVERSAL VALUES
+final float THETA = radians(30f); //Universal Testing radians, this needs to not be used in the end
+final float MAXBRANCHVALUE = .77; //Maximum length a specific branch can be to it's parent. This should be decided more intelligently
+final float FFTBANDSCALE = 50; //multiplies the size of the heightvalues by this to make them visible... This should be done more intelligently
+
+float MaxBandValue = 0; //Current highest observed max value is 818.8453?
+
+int numberoflevels =9;
+int fftbands = (int) pow(2, numberoflevels+1);
+float[] heights= new float[fftbands];
+float[] heights2 = new float[numberoflevels];
+color[] colors= new color[fftbands];
+float[] angles = new float[fftbands];
 int height_index;
 int angle_index;
 int color_index;
-branch b_head;
 
-void setup(){
+branch b_root; //Treeroot
+
+void setup() {
   size(640, 360);
-   minim = new Minim(this);
-  b_head = new branch(null,0,0);
+  surface.setResizable(true);
+  minim = new Minim(this);
+  b_root = new branch(null, 0, 0);
   newsession = true;
 }
 
-void draw(){
-  if(newsession){
+void draw() {
+  background(0);
+  frameRate(60);
+  if (newsession) {
+
+    //Chooses Music File
     JFileChooser chooser = new JFileChooser();
     int returnValue = chooser.showOpenDialog(null);
-    if(returnValue == JFileChooser.APPROVE_OPTION){
+    if (returnValue == JFileChooser.APPROVE_OPTION) {
       File file = chooser.getSelectedFile();
-      song = minim.loadFile(file.getAbsolutePath(),(int) pow(2,numberoflevels+1));  
+      song = minim.loadFile(file.getAbsolutePath(), fftbands); //fftbands is based on number of levels
+    }
+    if (song == null) {
+      exit();
     }
     song.play();
     newsession = false;
-    fft = new FFT(song.bufferSize(), song.sampleRate());
-    println("HELLO" + song.bufferSize()+"YA"+ song.sampleRate() +" YA" + song.sampleRate()/song.bufferSize() );
+    fft = new FFT(song.bufferSize(), song.sampleRate()); //Begins new fft sessions
   }
-  
-  fft.forward(song.mix);
-  
-  //println(fft.specSize());
-  
-  background(0);
-  frameRate(30);
-  stroke(255);
-  
+  fft.forward(song.mix); //step the fft to the next song frame
+
+  branch_heights(); //Calculate all branch heights
+
+  //branch_angles(); //Calculates all branch angles
+
+  branch_colors(); //Calculates all branch colors
+  translate(0, 0);
+  tests(); // generates all testing stuff
+
   // Start the tree from the bottom of the screen
-  translate(width/2,height);
-  float fftave = 0;
-  for(int c = 0; c < fft.specSize(); c++){
-     fftave+=fft.getBand(c); 
-  }
-  println(fftave);
-  //Random Heights
-  
-  for(int i = 0; i < (int) pow(2,numberoflevels+1); i++){
-    heights[i] = fft.getBand(i);//random(.5,.9);
-  }
-  /*
-  height_index = 0;
-  b_head.set_height(heights,0,(int) pow(2,numberoflevels+1));
-  height_index = 0;
-  */
-  
-  float[] heights2 = new float[numberoflevels];
-  int numHeights = (int) pow(2,numberoflevels+1);
-  for(int i = 0; i < numberoflevels; i++){
-    float sum = 0;
-    for(int k = (numHeights/numberoflevels)*i; k < (numHeights/numberoflevels)*(i+1); k++){
-     sum += heights[k]; 
-    }
-    sum /= (((numHeights/numberoflevels)*(i))+((numHeights/numberoflevels)*(i+1)))/2;
-    heights2[i] = sum;
-  }
-  
-  b_head.set_height_by_id(heights2);
-  //
-  /*
-  for(int i = 0; i < (int) pow(2,numberoflevels+1); i++){
-    angles[i] = (360/(2*PI))*(100);//random(0,90));
-  }
-  angle_index = 0;
-  b_head.set_angles(angles);
-  angle_index = 0;
-  */
-  //Random Colors
-  for(int i = 0; i < (int) pow(2,numberoflevels+1); i++){
+  translate(width/2, height);
+  b_root.draw_branch();
+}
+
+//return a value that will increase proportionally to interesting data in the fft spectrum.
+int get_displaced(int current) {
+  float ln_fft = log(fftbands); 
+  return (int) exp( (float) ((float)current/ (float)numberoflevels)*ln_fft);
+}
+color random_color() {
+  return color((int) random(0, 255), (int) random(0, 255), (int) random(0, 255));
+}
+color get_color(double freq) {
+  return color((int) (Math.sin(freq)* 127 + 128), (int) (Math.sin(freq+((2*Math.PI)/2)) * 127 + 128), (int) (Math.sin(freq+(Math.PI/2)) * 127 + 128));
+}
+
+void branch_colors() {
+  for (int i = 0; i < fftbands; i++) {
     colors[i] = get_color(fft.getBand(i));
   }
   color_index = 0;
-  b_head.set_colors(colors);
+  b_root.set_colors(colors);
   color_index = 0;
-  
-  b_head.draw_branch();
-  
-  delay(10);
 }
 
-color random_color(){
- return color((int) random(0,255), (int) random(0,255), (int) random(0,255));
-}
-color get_color(double freq){
-    return color((int) (Math.sin(freq)* 127 + 128), (int) (Math.sin(freq+((2*Math.PI)/2)) * 127 + 128), (int) (Math.sin(freq+(Math.PI/2)) * 127 + 128));
+void branch_angles() {
+  for (int i = 0; i < fftbands; i++) {
+    angles[i] = radians(random(0, 90));
+  }
+  angle_index = 0;
+  b_root.set_angles(angles);
+  angle_index = 0;
 }
 
-class branch{ //Significes specific branch of an object\
-  branch parent;
-  branch nextleft;
-  branch nextright;
-  
-  int id;
-  
-  color b_color;
-  float b_height;
-  float b_angle;
-  int level;
-  int side;
-  
-  branch(branch parent, int side, int id){
-    this.parent = parent;
-    this.id = id;
-    if(parent != null){
-      this.b_height = .66*parent.b_height;// + //.22*heights[index];//.66*parent.b_height;
-      height_index++;
-      this.level = parent.level + 1;
-      b_angle = theta;
-    }else{
-       this.b_height = 120; 
-       this.level = 0;
-       b_angle = 0;
+void branch_heights() {
+  //SETS fft values into a single heights array
+  for (int i = 0; i < fftbands; i++) {
+    heights[i] = FFTBANDSCALE*fft.getBand(i);//random(.5,.9);
+  }
+
+   //Version 1 putting the heights into the tree
+   /*
+   height_index = 0;
+   b_root.set_height_by_single_bands((heights,0,fftbands);
+   height_index = 0;
+   */
+
+  // Version 2, putting the heights into the tree, but by level
+
+  for (int i = 0; i < numberoflevels; i++) { //Create smaller array
+    float sum = 0;
+    for (int k = get_displaced(i); k < get_displaced(i+1); k++) { //Changes the start and stop values of this index's average. Varies proportionally as index increases
+      sum += heights[k];
     }
-    this.side = side;
-    if(level < numberoflevels){
-      this.nextleft = new branch(this, -1, id +1);
-      this.nextright = new branch(this, 1, id +1);
-    }else{
-       this.nextleft = null;
-       this.nextright = null;
-    }
-    
-    b_color = color(0,0,0);
+    sum /= (((fftbands/numberoflevels)*(i))+((fftbands/numberoflevels)*(i+1)))/2; // averages them
+    heights2[i] = sum; //multiplies values by something... This needs to be updated
   }
-  void draw_branch(){//float b_height,int input, int leftright){
-    pushMatrix();
-    rotate(side*b_angle);
-    stroke(b_color);
-    line(0,0,0,-b_height);
-    if(nextleft != null){
-      translate(0, -b_height);
-      nextleft.draw_branch();
-      nextright.draw_branch();
-    }
-    popMatrix();
-  }
-  void set_height(float[] heights,int lower,int upper){
-   if(parent != null){
-     float sum = 0;
-     for(int i = lower; i < upper; i++){
-      sum += heights[i]; 
-     }
-     if(sum > .66*parent.b_height){
-       sum = .66*parent.b_height;
-     }
-     this.b_height = sum;
-   }
-   height_index++;
-   if(nextleft != null){
-     nextleft.set_height(heights,lower, (lower+upper)/2);
-     nextright.set_height(heights,(lower+upper)/2, upper);
-   }
-  }
-  void set_angles(float[] angles){
-   if(parent != null){
-     this.b_angle = angles[angle_index];
-   }
-   angle_index++;
-   if(nextleft != null){
-     nextleft.set_angles(angles);
-     nextright.set_angles(angles);
-   }
-  }
-  void set_colors(color[] colors){
-   b_color = colors[color_index];
-   color_index++;
-   if(nextleft != null){
-     nextleft.set_colors(colors);
-     nextright.set_colors(colors);
-   }
+  b_root.set_height_by_id(heights2);
+  
+  //b_root.set_height(heights2, heights, 0, fftbands);
+}
+
+void tests(){ //Testing Space
+  for (int i = 0; i < heights2.length; i++) //tests new heights2 array
+  {
+    stroke(255,255,255, 50);
+    fill(140,140,140, 50);
+    rectMode(CORNERS);
+    rect( ((float) width/heights.length)*  get_displaced(i), height, ((float) width/heights.length)*  get_displaced(i+1), height-heights2[i]); //Displays how get_displaced currently scanes the fft groups...May or maynot be aligned to individual spectrum?
   }
   
-  void set_height_by_id(float[] heights2){
-    if(id < numberoflevels){
-      this.b_height = heights2[id];
-    }
-    if(nextleft != null){
-      nextleft.set_height_by_id(heights2);
-      nextright.set_height_by_id(heights2);
+  for(int i = 0; i < heights.length; i++){
+    stroke(255,0,0, 150);
+    line(((float)width/heights.length)*(i), height, ((float)width/heights.length)*(i), height - fft.getBand(i));
+    println(((float) width/heights.length)*(i+1)+ " : " + height);
+  }
+  /*
+  for (int i = 0; i < fftbands; i++) {
+    if (fft.getBand(i) > MaxBandValue) {
+      MaxBandValue = fft.getBand(i);
     }
   }
+  */
 }
