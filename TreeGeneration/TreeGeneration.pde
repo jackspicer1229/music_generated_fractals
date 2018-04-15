@@ -1,7 +1,10 @@
+import g4p_controls.*;
 import ddf.minim.*;
 import ddf.minim.analysis.*;
 import javax.swing.JFileChooser;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import java.util.Iterator;
+
 
 //Objects to create trees
 
@@ -12,16 +15,28 @@ AudioPlayer song;
 Minim minim;
 FFT fft;
 
+int widthh = 640;
+int heightt = 320;
+
 PVector gridPos = new PVector(0, 0, 0);//the position of the grid (it moves with the camera to make it look infinite)
 //UNIVERSAL VALUES
 final float THETA = radians(10f); //Universal Testing radians, this needs to not be used in the end
-final float MAXBRANCHVALUE = .77; //Maximum length a specific branch can be to it's parent. This should be decided more intelligently
-final float FFTBANDSCALE = 40; //multiplies the size of the heightvalues by this to make them visible... This should be done more intelligently
-final float FFTDecay = .7;//Rate that everything decays at
+
+float MAXBRANCHVALUE = .3; //Maximum length a specific branch can be to it's parent. This should be decided more intelligently
+float FFTBANDSCALE = 40; //multiplies the size of the heightvalues by this to make them visible... This should be done more intelligently
+float FFTDecay = .7;//Rate that everything decays at
+float COLORFREQDIVISOR = 50; //Something that modifies the value of the fftband to generate a specific color... this isn't intelligently decided in anyway.
+float ANGLEMULTIPLIER = .6;
+float BASE = 2.6;
+
+
 
 float MaxBandValue = 0; //Current highest observed max value is 818.8453?
 
-int numberoflevels =9;
+final boolean TOPFLOWER = false; //If there's a top flower or not. Note this adds +1 to numberofbranches
+int numberoflevels =13; //Should be an even number for tiles on the ground// Bigger than 7 will make things... slow //Has issues when below 6
+int numberofbranches = 2;
+//Note, this is (numberofbranches)^(numberoflevels+1)... This should be kept under 20000 or so... e.g... 2^14, 3^9, 4^7, 5^6
 int fftbands = (int) pow(2, numberoflevels+1); //NOTE This is a 3 when in 3d, and a 2 in 2d...
 float[] heights= new float[fftbands];
 float[] heights2 = new float[numberoflevels];
@@ -39,10 +54,11 @@ float thetaSpeed = .01f;
 float currentTheta;
 
 void setup() {
-  size(640, 360, P3D); //NOW IN 3D!!! //CAREFUL, Not what height is being done and stuff! Not everything supports 3d!
+  size(1600, 900, P3D); //NOW IN 3D!!! //CAREFUL, Not what height is being done and stuff! Not everything supports 3d!
   background(0);
-  lights();
-
+  ambientLight(120,120,120);
+  createGUI();
+  
   surface.setResizable(true);
   minim = new Minim(this);
   b_root = new branch(null, 0, 0);
@@ -53,9 +69,11 @@ void setup() {
   //camera(mouseX, height/2, (height/2) / tan(PI/6), width/2, height/2, 0, 0, 1, 0);
 
   if (newsession) {
-
     //Chooses Music File
-    JFileChooser chooser = new JFileChooser();
+    JFileChooser chooser = new JFileChooser(sketchPath(""));
+
+    FileNameExtensionFilter filter = new FileNameExtensionFilter("MP3 Files only please","mp3");
+    chooser.setFileFilter(filter);
     int returnValue = chooser.showOpenDialog(null);
     if (returnValue == JFileChooser.APPROVE_OPTION) {
       File file = chooser.getSelectedFile();
@@ -71,6 +89,11 @@ void setup() {
 }
 
 void draw() {
+  if(widthh != width){
+   createGUI();
+   widthh = width;
+   heightt = height;
+  }
   background(0);
   frameRate(60);
   
@@ -78,12 +101,12 @@ void draw() {
 
   branch_heights(); //Calculate all branch heights
 
-  //branch_angles(); //Calculates all branch angles
+  branch_angles(); //Calculates all branch angles
 
   branch_colors(); //Calculates all branch colors
 
   translate(0, 0, 0);
-  tests(); // generates all testing stuff
+  //tests(); // generates all testing stuff
 
   // Start the tree from the bottom of the screen
   translate(width/2, (3*height)/4, -100); // -Z = depth
@@ -95,7 +118,8 @@ void draw() {
   b_root.draw_branch();
   popMatrix();
   
-  int number_of_tiles = numberoflevels; //How many tiles are on the ground
+  //TILE Generation we should make this more fancy with matricies or something idk dude
+  int number_of_tiles = numberoflevels + 1; //How many tiles are on the ground
   float tile_size = 70;
   noFill();//i only want the outline of the rectangles
   for (int x = -number_of_tiles/2; x < number_of_tiles/2; x++) {
@@ -116,6 +140,10 @@ void draw() {
       rect(0, 0, tile_size, tile_size);
       popMatrix();
     }
+    
+    if(!song.isPlaying()){
+      newsession = true;
+    }
   }
   
   
@@ -123,36 +151,38 @@ void draw() {
 }
 //return a value that will increase proportionally to interesting data in the fft spectrum.
 int get_displaced(int current) {
+  //float k = fftbands/numberoflevels;
+  //return (int) k*current;
+  
   float ln_fft = log(fftbands); 
-  return (int) exp( (float) ((float)current/ (float)numberoflevels)*ln_fft); //Currently just uses the exponential curve of e for no particular reason
+  return (int) pow(BASE, (float) ((float)current/ (float)numberoflevels)*(ln_fft)/log(BASE)) -1; 
+  
 }
 color random_color() {
   return color((int) random(0, 255), (int) random(0, 255), (int) random(0, 255));
 }
 color get_color(double freq) {
-  freq = freq/100;
+  freq = freq/COLORFREQDIVISOR;
   return color((int) (Math.sin(freq)* 127 + 128), (int) (Math.sin(freq+((2*Math.PI)/2)) * 127 + 128), (int) (Math.sin(freq+(Math.PI/2)) * 127 + 128));
 }
 color get_color(double freq, float alpha){
-  freq = freq/100;
+  freq = freq/COLORFREQDIVISOR;
   return color((int) (Math.sin(freq)* 127 + 128), (int) (Math.sin(freq+((2*Math.PI)/2)) * 127 + 128), (int) (Math.sin(freq+(Math.PI/2)) * 127 + 128), alpha);
 }
 
 void branch_colors() {
   for (int i = 0; i < heights2.length; i++) {
-    colors[i] = get_color(heights2[i]);
+    colors[i] = get_color(heights2[i] , 200f);
   }
   b_root.set_colors(colors);
   //b_root_2.set_colors(colors);
 }
 
 void branch_angles() {
-  for (int i = 0; i < fftbands; i++) {
-    angles[i] = radians(random(0, 90));
+  for (int i = heights2.length -1; i > 0 ; i--) {
+    angles[i] = radians(ANGLEMULTIPLIER*heights2[i]);
   }
-  angle_index = 0;
   b_root.set_angles(angles);
-  angle_index = 0;
 }
 
 void branch_heights() {
@@ -160,11 +190,10 @@ void branch_heights() {
   for (int i = 0; i < fftbands; i++) {
     if (heights[i] + FFTBANDSCALE*fft.getBand(i) - FFTDecay > 0) {
       heights[i] += FFTBANDSCALE*fft.getBand(i);
-      heights[i] *= FFTDecay;
+      heights[i] *= FFTDecay;  //Decreases every tick
     } else {
       heights[i] = 0;
     }
-    // - FFTDecay;//random(.5,.9);
   }
 
   //Version 1 putting the heights into the tree

@@ -1,10 +1,8 @@
 
 class branch { //Significes specific branch of an object\
   branch parent;
-  branch nextleft;
-  branch nextMiddle;
-  branch nextright;
   
+  ArrayList<branch>  children = new ArrayList<branch>();
 
   int id; //level in the tree
 
@@ -19,11 +17,16 @@ class branch { //Significes specific branch of an object\
     this.parent = parent;
     this.id = id;
     if (parent != null) {
-      this.b_height = .66*parent.b_height;// + //.22*heights[index];//.66*parent.b_height;
+      this.b_height = MAXBRANCHVALUE*parent.b_height;// + //.22*heights[index];//.66*parent.b_height;
       height_index++;
       this.level = parent.level + 1;
       b_angle = THETA;
-      b_offset = ((2*PI)/3) * side;
+      if(side == -1){
+        b_offset = 0;
+        b_angle = 0;
+      }else{
+        b_offset = ((2*PI)/numberofbranches) * side;
+      }
     } else {
       this.b_height = 120; 
       this.level = 0;
@@ -32,13 +35,11 @@ class branch { //Significes specific branch of an object\
     }
     this.side = side;
     if (level < numberoflevels) {
-      this.nextleft = new branch(this, 0, id +1);
-      this.nextMiddle = new branch(this, 1, id +1);
-      this.nextright = new branch(this, 2, id +1);
+      for(int i = 0 - (TOPFLOWER?1:0); i < numberofbranches; i++){
+        children.add(new branch(this, i, id+1));
+      }
     } else {
-      this.nextleft = null;
-      this.nextMiddle = null;
-      this.nextright = null;
+      children = null;
     }
 
     b_color = color(255,255,255);
@@ -53,20 +54,14 @@ class branch { //Significes specific branch of an object\
     stroke(b_color);
     line(0, 0, 0, -b_height);
     
-    if (nextleft != null) {
+    if (children != null) {
       translate(0, -b_height, 0);
-      pushMatrix();
-      rotateY(((2*PI)/3) * 0);
-      nextleft.draw_branch();
-      popMatrix();
-      pushMatrix();
-      rotateY(((2*PI)/3) * 1);
-      nextMiddle.draw_branch();
-      popMatrix();
-      pushMatrix();
-      rotateY(((2*PI)/3) * 2);
-      nextright.draw_branch();
-      popMatrix();
+      for(branch k : children){
+        pushMatrix();
+        rotateY(((2*PI)/numberofbranches) * k.side);
+        k.draw_branch();
+        popMatrix();
+      }
     }
     popMatrix();
   }
@@ -84,21 +79,30 @@ class branch { //Significes specific branch of an object\
     }
     height_index++;
 
-    if (nextleft != null) {
-      nextleft.set_height_by_single_bands(heights, lower, (lower+upper)/2);
+    if (children != null) {
+      /*
+      children.set_height_by_single_bands(heights, lower, (lower+upper)/2);
       //nextleft.set_height_by_single_bands(heights, lower, (lower+upper)/2);
       nextright.set_height_by_single_bands(heights, (lower+upper)/2, upper);
+      */
     }
   }
 
   void set_height_by_id(float[] heights2) { //SUPPORTS 3d!
     if (id < numberoflevels) {
-      this.b_height = heights2[id];
-    }
-    if (nextleft != null) {
-      nextleft.set_height_by_id(heights2);
-      nextMiddle.set_height_by_id(heights2);
-      nextright.set_height_by_id(heights2);
+      if(id!= 0){
+        if(heights2[id] < heights2[id-1]){
+          this.b_height = heights2[id];
+        }else{
+          this.b_height = MAXBRANCHVALUE*heights2[id-1];
+        }
+      }else{
+        this.b_height = BASE*20 + MAXBRANCHVALUE*heights2[id];
+      };    }
+    if (children != null) {
+      for(branch k : children){
+        k.set_height_by_id(heights2);
+      }
     }
   }
 /*
@@ -124,24 +128,25 @@ class branch { //Significes specific branch of an object\
   }
 */
   void set_angles(float[] angles) {
-    if (parent != null) {
-      this.b_angle = angles[angle_index];
+    if(side == -1){
+      b_angle = 0;
+    }else{
+      b_angle = angles[id];
     }
-    angle_index++;
-    if (nextleft != null) {
-      nextleft.set_angles(angles);
-      nextMiddle.set_angles(angles);
-      nextright.set_angles(angles);
+    if (children != null) {
+      for(branch k : children){
+        k.set_angles(angles);
+      }
     }
   }
 
   void set_colors(color[] colors) {
     b_color = colors[id];
     //color_index++;
-    if (nextleft != null) {
-      nextleft.set_colors(colors);
-      nextMiddle.set_colors(colors);
-      nextright.set_colors(colors);
+    if (children != null) {
+      for(branch k : children){
+        k.set_colors(colors);
+      }
     }
   }
 }
