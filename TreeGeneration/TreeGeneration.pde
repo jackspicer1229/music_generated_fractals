@@ -54,28 +54,33 @@ void draw(){
   
   // Start the tree from the bottom of the screen
   translate(width/2,height);
-  
+  float fftave = 0;
+  for(int c = 0; c < fft.specSize(); c++){
+     fftave+=fft.getBand(c); 
+  }
+  println(fftave);
   //Random Heights
+  
   for(int i = 0; i < (int) pow(2,numberoflevels+1); i++){
-    heights[i] = 120; //1 + fft.getBand(i);//random(.5,.9);
+    heights[i] = fft.getBand(i);//random(.5,.9);
   }
   height_index = 0;
   b_head.set_height(heights,0,(int) pow(2,numberoflevels+1));
   height_index = 0;
+  
   //
-  //Random Heights
+  /*
   for(int i = 0; i < (int) pow(2,numberoflevels+1); i++){
-    angles[i] = (360/(2*PI))*(15);//random(0,90));
+    angles[i] = (360/(2*PI))*(100);//random(0,90));
   }
   angle_index = 0;
   b_head.set_angles(angles);
   angle_index = 0;
-  
+  */
   //Random Colors
   for(int i = 0; i < (int) pow(2,numberoflevels+1); i++){
-    colors[i] = random_color();
+    colors[i] = get_color(fft.getBand(i));
   }
-  
   color_index = 0;
   b_head.set_colors(colors);
   color_index = 0;
@@ -88,8 +93,8 @@ void draw(){
 color random_color(){
  return color((int) random(0,255), (int) random(0,255), (int) random(0,255));
 }
-color get_color(int index){
-  
+color get_color(double freq){
+    return color((int) (Math.sin(freq)* 127 + 128), (int) (Math.sin(freq+((2*Math.PI)/2)) * 127 + 128), (int) (Math.sin(freq+(Math.PI/2)) * 127 + 128));
 }
 
 class branch{ //Significes specific branch of an object\
@@ -109,9 +114,11 @@ class branch{ //Significes specific branch of an object\
       this.b_height = .66*parent.b_height;// + //.22*heights[index];//.66*parent.b_height;
       height_index++;
       this.level = parent.level + 1;
+      b_angle = theta;
     }else{
        this.b_height = 120; 
        this.level = 0;
+       b_angle = 0;
     }
     this.side = side;
     if(level < numberoflevels){
@@ -121,7 +128,7 @@ class branch{ //Significes specific branch of an object\
        this.nextleft = null;
        this.nextright = null;
     }
-    b_angle = 0;
+    
     b_color = color(0,0,0);
   }
   void draw_branch(){//float b_height,int input, int leftright){
@@ -138,11 +145,13 @@ class branch{ //Significes specific branch of an object\
   }
   void set_height(float[] heights,int lower,int upper){
    if(parent != null){
-     int sum = 0;
+     float sum = 0;
      for(int i = lower; i < upper; i++){
       sum += heights[i]; 
      }
-     sum /= (lower+upper);
+     if(sum > .66*parent.b_height){
+       sum = .66*parent.b_height;
+     }
      this.b_height = sum;
    }
    height_index++;
@@ -162,10 +171,7 @@ class branch{ //Significes specific branch of an object\
    }
   }
   void set_colors(color[] colors){
-   if(parent != null){
-     b_color = colors[color_index];
-     
-   }
+   b_color = colors[color_index];
    color_index++;
    if(nextleft != null){
      nextleft.set_colors(colors);
