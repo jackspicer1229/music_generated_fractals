@@ -20,8 +20,8 @@ final float FFTBANDSCALE = 50; //multiplies the size of the heightvalues by this
 
 float MaxBandValue = 0; //Current highest observed max value is 818.8453?
 
-int numberoflevels =9;
-int fftbands = (int) pow(2, numberoflevels+1);
+int numberoflevels =7;
+int fftbands = (int) pow(2, numberoflevels+1); //NOTE This is a 3 when in 3d, and a 2 in 2d...
 float[] heights= new float[fftbands];
 float[] heights2 = new float[numberoflevels];
 color[] colors= new color[fftbands];
@@ -32,17 +32,27 @@ int color_index;
 
 branch b_root; //Treeroot
 
+//3D STUFF!
+float thetaSpeed = .01f;
+float currentTheta;
+
 void setup() {
-  size(640, 360);
+  size(640, 360, P3D); //NOW IN 3D!!! //CAREFUL, Not what height is being done and stuff! Not everything supports 3d!
+  background(0);
+  lights();
+  
   surface.setResizable(true);
   minim = new Minim(this);
   b_root = new branch(null, 0, 0);
   newsession = true;
+  currentTheta = 0;
 }
 
 void draw() {
   background(0);
   frameRate(60);
+  //camera(mouseX, height/2, (height/2) / tan(PI/6), width/2, height/2, 0, 0, 1, 0);
+  
   if (newsession) {
 
     //Chooses Music File
@@ -65,19 +75,23 @@ void draw() {
 
   //branch_angles(); //Calculates all branch angles
 
-  branch_colors(); //Calculates all branch colors
-  translate(0, 0);
+  //branch_colors(); //Calculates all branch colors
+  translate(0, 0, 0);
   tests(); // generates all testing stuff
 
   // Start the tree from the bottom of the screen
-  translate(width/2, height);
+  translate(width/2, height, -100); // -Z = depth
+  currentTheta += thetaSpeed;
+  rotateY(currentTheta);
+  pushMatrix();
   b_root.draw_branch();
+  popMatrix();
 }
 
 //return a value that will increase proportionally to interesting data in the fft spectrum.
 int get_displaced(int current) {
   float ln_fft = log(fftbands); 
-  return (int) exp( (float) ((float)current/ (float)numberoflevels)*ln_fft);
+  return (int) exp( (float) ((float)current/ (float)numberoflevels)*ln_fft); //Currently just uses the exponential curve of e for no particular reason
 }
 color random_color() {
   return color((int) random(0, 255), (int) random(0, 255), (int) random(0, 255));
@@ -144,7 +158,7 @@ void tests(){ //Testing Space
   for(int i = 0; i < heights.length; i++){
     stroke(255,0,0, 150);
     line(((float)width/heights.length)*(i), height, ((float)width/heights.length)*(i), height - fft.getBand(i));
-    println(((float) width/heights.length)*(i+1)+ " : " + height);
+    //println(((float) width/heights.length)*(i+1)+ " : " + height);
   }
   /*
   for (int i = 0; i < fftbands; i++) {
