@@ -12,16 +12,16 @@ AudioPlayer song;
 Minim minim;
 FFT fft;
 
-
+PVector gridPos = new PVector(0, 0, 0);//the position of the grid (it moves with the camera to make it look infinite)
 //UNIVERSAL VALUES
-final float THETA = radians(45f); //Universal Testing radians, this needs to not be used in the end
+final float THETA = radians(10f); //Universal Testing radians, this needs to not be used in the end
 final float MAXBRANCHVALUE = .77; //Maximum length a specific branch can be to it's parent. This should be decided more intelligently
 final float FFTBANDSCALE = 40; //multiplies the size of the heightvalues by this to make them visible... This should be done more intelligently
 final float FFTDecay = .7;//Rate that everything decays at
 
 float MaxBandValue = 0; //Current highest observed max value is 818.8453?
 
-int numberoflevels =7;
+int numberoflevels =9;
 int fftbands = (int) pow(2, numberoflevels+1); //NOTE This is a 3 when in 3d, and a 2 in 2d...
 float[] heights= new float[fftbands];
 float[] heights2 = new float[numberoflevels];
@@ -32,6 +32,7 @@ int angle_index;
 int color_index;
 
 branch b_root; //Treeroot
+//branch b_root_2;
 
 //3D STUFF!
 float thetaSpeed = .01f;
@@ -45,6 +46,7 @@ void setup() {
   surface.setResizable(true);
   minim = new Minim(this);
   b_root = new branch(null, 0, 0);
+  //b_root_2 = new branch(null, 0, 0);
   newsession = true;
   currentTheta = 0;
   
@@ -84,7 +86,7 @@ void draw() {
   tests(); // generates all testing stuff
 
   // Start the tree from the bottom of the screen
-  translate(width/2, height, -100); // -Z = depth
+  translate(width/2, (3*height)/4, -100); // -Z = depth
 
   currentTheta += thetaSpeed; //Slowly rotate the entire screen
   rotateY(currentTheta);
@@ -92,6 +94,32 @@ void draw() {
   pushMatrix();
   b_root.draw_branch();
   popMatrix();
+  
+  int number_of_tiles = numberoflevels; //How many tiles are on the ground
+  float tile_size = 70;
+  noFill();//i only want the outline of the rectangles
+  for (int x = -number_of_tiles/2; x < number_of_tiles/2; x++) {
+    for (int y = -number_of_tiles/2; y < number_of_tiles/2; y++) {
+      //run two for loops, cycling through 10 different positions of rectangles
+      pushMatrix();
+      
+      //color k = get_color(heights2[(int) ((sqrt(x*x + y*y) )/2)], 255 - (255 / (number_of_tiles))* abs(sqrt(x*x + y*y)/2));
+      color k = get_color(heights2[0]);
+      stroke(k);
+      
+      //uncomment the next line:
+      //stroke(0,255,0);
+      // to see how the infinity thing works
+      
+      translate(x*tile_size, 0, y*tile_size);//move the rectangles to where they shall be
+      rotateX(HALF_PI);
+      rect(0, 0, tile_size, tile_size);
+      popMatrix();
+    }
+  }
+  
+  
+  
 }
 //return a value that will increase proportionally to interesting data in the fft spectrum.
 int get_displaced(int current) {
@@ -105,12 +133,17 @@ color get_color(double freq) {
   freq = freq/100;
   return color((int) (Math.sin(freq)* 127 + 128), (int) (Math.sin(freq+((2*Math.PI)/2)) * 127 + 128), (int) (Math.sin(freq+(Math.PI/2)) * 127 + 128));
 }
+color get_color(double freq, float alpha){
+  freq = freq/100;
+  return color((int) (Math.sin(freq)* 127 + 128), (int) (Math.sin(freq+((2*Math.PI)/2)) * 127 + 128), (int) (Math.sin(freq+(Math.PI/2)) * 127 + 128), alpha);
+}
 
 void branch_colors() {
   for (int i = 0; i < heights2.length; i++) {
     colors[i] = get_color(heights2[i]);
   }
   b_root.set_colors(colors);
+  //b_root_2.set_colors(colors);
 }
 
 void branch_angles() {
@@ -159,6 +192,7 @@ void branch_heights() {
      */
   }
   b_root.set_height_by_id(heights2);
+  //b_root_2.set_height_by_id(heights2);
 
   //b_root.set_height(heights2, heights, 0, fftbands);
 }
