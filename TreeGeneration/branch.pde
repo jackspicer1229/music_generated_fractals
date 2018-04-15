@@ -136,11 +136,11 @@ class branch { //Significes specific branch of an object\
   }
 
   void set_colors(color[] colors) {
-    b_color = colors[color_index];
-    color_index++;
+    b_color = colors[id];
+    //color_index++;
     if (nextleft != null) {
       nextleft.set_colors(colors);
-      //nextMiddle.set_colors(colors);
+      nextMiddle.set_colors(colors);
       nextright.set_colors(colors);
     }
   }

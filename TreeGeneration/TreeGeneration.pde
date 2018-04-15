@@ -76,14 +76,17 @@ void draw() {
 
   //branch_angles(); //Calculates all branch angles
 
-  //branch_colors(); //Calculates all branch colors
+  branch_colors(); //Calculates all branch colors
+
   translate(0, 0, 0);
   tests(); // generates all testing stuff
 
   // Start the tree from the bottom of the screen
   translate(width/2, height, -100); // -Z = depth
-  currentTheta += thetaSpeed;
+
+  currentTheta += thetaSpeed; //Slowly rotate the entire screen
   rotateY(currentTheta);
+
   pushMatrix();
   b_root.draw_branch();
   popMatrix();
@@ -101,12 +104,10 @@ color get_color(double freq) {
 }
 
 void branch_colors() {
-  for (int i = 0; i < fftbands; i++) {
-    colors[i] = get_color(fft.getBand(i));
+  for (int i = 0; i < heights2.length; i++) {
+    colors[i] = get_color(heights2[i]);
   }
-  color_index = 0;
   b_root.set_colors(colors);
-  color_index = 0;
 }
 
 void branch_angles() {
@@ -148,11 +149,11 @@ void branch_heights() {
     heights2[i] = sum; //multiplies values by something... This needs to be updated
     /*
     if(heights2[i] - FFTDecay < 0){
-      heights2[i] = 0;
-    }else{
-      heights2[i] -= 10;
-    }
-    */
+     heights2[i] = 0;
+     }else{
+     heights2[i] -= 10;
+     }
+     */
   }
   b_root.set_height_by_id(heights2);
 
