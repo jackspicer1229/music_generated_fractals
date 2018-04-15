@@ -14,10 +14,10 @@ FFT fft;
 
 
 //UNIVERSAL VALUES
-final float THETA = radians(30f); //Universal Testing radians, this needs to not be used in the end
+final float THETA = radians(45f); //Universal Testing radians, this needs to not be used in the end
 final float MAXBRANCHVALUE = .77; //Maximum length a specific branch can be to it's parent. This should be decided more intelligently
-final float FFTBANDSCALE = 100; //multiplies the size of the heightvalues by this to make them visible... This should be done more intelligently
-final float FFTDecay = 100;
+final float FFTBANDSCALE = 40; //multiplies the size of the heightvalues by this to make them visible... This should be done more intelligently
+final float FFTDecay = .7;//Rate that everything decays at
 
 float MaxBandValue = 0; //Current highest observed max value is 818.8453?
 
@@ -36,9 +36,6 @@ branch b_root; //Treeroot
 //3D STUFF!
 float thetaSpeed = .01f;
 float currentTheta;
-
-long time = 0; //Don't run this program for 63 years!
-long lastTime = 0;
 
 void setup() {
   size(640, 360, P3D); //NOW IN 3D!!! //CAREFUL, Not what height is being done and stuff! Not everything supports 3d!
@@ -90,14 +87,6 @@ void draw() {
   pushMatrix();
   b_root.draw_branch();
   popMatrix();
-  
-  time++;
-}
-
-long deltaTime(){
-  long k = time - lastTime;
-  lastTime = time;
-  return k;
 }
 //return a value that will increase proportionally to interesting data in the fft spectrum.
 int get_displaced(int current) {
@@ -133,7 +122,8 @@ void branch_heights() {
   //SETS fft values into a single heights array
   for (int i = 0; i < fftbands; i++) {
     if (heights[i] + FFTBANDSCALE*fft.getBand(i) - FFTDecay > 0) {
-      heights[i] = FFTBANDSCALE*fft.getBand(i);
+      heights[i] += FFTBANDSCALE*fft.getBand(i);
+      heights[i] *= FFTDecay;
     } else {
       heights[i] = 0;
     }
