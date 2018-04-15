@@ -16,7 +16,8 @@ FFT fft;
 //UNIVERSAL VALUES
 final float THETA = radians(30f); //Universal Testing radians, this needs to not be used in the end
 final float MAXBRANCHVALUE = .77; //Maximum length a specific branch can be to it's parent. This should be decided more intelligently
-final float FFTBANDSCALE = 50; //multiplies the size of the heightvalues by this to make them visible... This should be done more intelligently
+final float FFTBANDSCALE = 100; //multiplies the size of the heightvalues by this to make them visible... This should be done more intelligently
+final float FFTDecay = 100;
 
 float MaxBandValue = 0; //Current highest observed max value is 818.8453?
 
@@ -36,11 +37,14 @@ branch b_root; //Treeroot
 float thetaSpeed = .01f;
 float currentTheta;
 
+long time = 0; //Don't run this program for 63 years!
+long lastTime = 0;
+
 void setup() {
   size(640, 360, P3D); //NOW IN 3D!!! //CAREFUL, Not what height is being done and stuff! Not everything supports 3d!
   background(0);
   lights();
-  
+
   surface.setResizable(true);
   minim = new Minim(this);
   b_root = new branch(null, 0, 0);
@@ -52,7 +56,7 @@ void draw() {
   background(0);
   frameRate(60);
   //camera(mouseX, height/2, (height/2) / tan(PI/6), width/2, height/2, 0, 0, 1, 0);
-  
+
   if (newsession) {
 
     //Chooses Music File
@@ -86,8 +90,15 @@ void draw() {
   pushMatrix();
   b_root.draw_branch();
   popMatrix();
+  
+  time++;
 }
 
+long deltaTime(){
+  long k = time - lastTime;
+  lastTime = time;
+  return k;
+}
 //return a value that will increase proportionally to interesting data in the fft spectrum.
 int get_displaced(int current) {
   float ln_fft = log(fftbands); 
@@ -121,11 +132,16 @@ void branch_angles() {
 void branch_heights() {
   //SETS fft values into a single heights array
   for (int i = 0; i < fftbands; i++) {
-    heights[i] = FFTBANDSCALE*fft.getBand(i);//random(.5,.9);
+    if (heights[i] + FFTBANDSCALE*fft.getBand(i) - FFTDecay > 0) {
+      heights[i] = FFTBANDSCALE*fft.getBand(i);
+    } else {
+      heights[i] = 0;
+    }
+    // - FFTDecay;//random(.5,.9);
   }
 
-   //Version 1 putting the heights into the tree
-   /*
+  //Version 1 putting the heights into the tree
+  /*
    height_index = 0;
    b_root.set_height_by_single_bands((heights,0,fftbands);
    height_index = 0;
@@ -140,31 +156,38 @@ void branch_heights() {
     }
     sum /= (((fftbands/numberoflevels)*(i))+((fftbands/numberoflevels)*(i+1)))/2; // averages them
     heights2[i] = sum; //multiplies values by something... This needs to be updated
+    /*
+    if(heights2[i] - FFTDecay < 0){
+      heights2[i] = 0;
+    }else{
+      heights2[i] -= 10;
+    }
+    */
   }
   b_root.set_height_by_id(heights2);
-  
+
   //b_root.set_height(heights2, heights, 0, fftbands);
 }
 
-void tests(){ //Testing Space
+void tests() { //Testing Space
   for (int i = 0; i < heights2.length; i++) //tests new heights2 array
   {
-    stroke(255,255,255, 50);
-    fill(140,140,140, 50);
+    stroke(255, 255, 255, 50);
+    fill(140, 140, 140, 50);
     rectMode(CORNERS);
     rect( ((float) width/heights.length)*  get_displaced(i), height, ((float) width/heights.length)*  get_displaced(i+1), height-heights2[i]); //Displays how get_displaced currently scanes the fft groups...May or maynot be aligned to individual spectrum?
   }
-  
-  for(int i = 0; i < heights.length; i++){
-    stroke(255,0,0, 150);
+
+  for (int i = 0; i < heights.length; i++) {
+    stroke(255, 0, 0, 150);
     line(((float)width/heights.length)*(i), height, ((float)width/heights.length)*(i), height - fft.getBand(i));
     //println(((float) width/heights.length)*(i+1)+ " : " + height);
   }
   /*
   for (int i = 0; i < fftbands; i++) {
-    if (fft.getBand(i) > MaxBandValue) {
-      MaxBandValue = fft.getBand(i);
-    }
-  }
-  */
+   if (fft.getBand(i) > MaxBandValue) {
+   MaxBandValue = fft.getBand(i);
+   }
+   }
+   */
 }
