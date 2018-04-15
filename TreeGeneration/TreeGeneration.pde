@@ -26,7 +26,7 @@ branch b_head;
 void setup(){
   size(640, 360);
    minim = new Minim(this);
-  b_head = new branch(null,0);
+  b_head = new branch(null,0,0);
   newsession = true;
 }
 
@@ -64,10 +64,24 @@ void draw(){
   for(int i = 0; i < (int) pow(2,numberoflevels+1); i++){
     heights[i] = fft.getBand(i);//random(.5,.9);
   }
+  /*
   height_index = 0;
   b_head.set_height(heights,0,(int) pow(2,numberoflevels+1));
   height_index = 0;
+  */
   
+  float[] heights2 = new float[numberoflevels];
+  int numHeights = (int) pow(2,numberoflevels+1);
+  for(int i = 0; i < numberoflevels; i++){
+    float sum = 0;
+    for(int k = (numHeights/numberoflevels)*i; k < (numHeights/numberoflevels)*(i+1); k++){
+     sum += heights[k]; 
+    }
+    sum /= (((numHeights/numberoflevels)*(i))+((numHeights/numberoflevels)*(i+1)))/2;
+    heights2[i] = sum;
+  }
+  
+  b_head.set_height_by_id(heights2);
   //
   /*
   for(int i = 0; i < (int) pow(2,numberoflevels+1); i++){
@@ -102,14 +116,17 @@ class branch{ //Significes specific branch of an object\
   branch nextleft;
   branch nextright;
   
+  int id;
+  
   color b_color;
   float b_height;
   float b_angle;
   int level;
   int side;
   
-  branch(branch parent, int side){
+  branch(branch parent, int side, int id){
     this.parent = parent;
+    this.id = id;
     if(parent != null){
       this.b_height = .66*parent.b_height;// + //.22*heights[index];//.66*parent.b_height;
       height_index++;
@@ -122,8 +139,8 @@ class branch{ //Significes specific branch of an object\
     }
     this.side = side;
     if(level < numberoflevels){
-      this.nextleft = new branch(this, -1);
-      this.nextright = new branch(this, 1);
+      this.nextleft = new branch(this, -1, id +1);
+      this.nextright = new branch(this, 1, id +1);
     }else{
        this.nextleft = null;
        this.nextright = null;
@@ -177,5 +194,15 @@ class branch{ //Significes specific branch of an object\
      nextleft.set_colors(colors);
      nextright.set_colors(colors);
    }
+  }
+  
+  void set_height_by_id(float[] heights2){
+    if(id < numberoflevels){
+      this.b_height = heights2[id];
+    }
+    if(nextleft != null){
+      nextleft.set_height_by_id(heights2);
+      nextright.set_height_by_id(heights2);
+    }
   }
 }
