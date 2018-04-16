@@ -28,7 +28,7 @@ class branch { //Significes specific branch of an object\
         b_offset = ((2*PI)/numberofbranches) * side;
       }
     } else {
-      this.b_height = 120; 
+      this.b_height = 0; 
       this.level = 0;
       b_angle = 0;
       b_offset = 0;
@@ -97,7 +97,7 @@ class branch { //Significes specific branch of an object\
           this.b_height = MAXBRANCHVALUE*heights2[id-1];
         }
       }else{
-        this.b_height = BASE*20 + MAXBRANCHVALUE*heights2[id];
+        //this.b_height = BASE*20 + MAXBRANCHVALUE*heights2[id];
       };    }
     if (children != null) {
       for(branch k : children){

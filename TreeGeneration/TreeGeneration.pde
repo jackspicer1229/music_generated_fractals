@@ -34,7 +34,7 @@ float BASE = 2.6;
 float MaxBandValue = 0; //Current highest observed max value is 818.8453?
 
 final boolean TOPFLOWER = false; //If there's a top flower or not. Note this adds +1 to numberofbranches
-int numberoflevels =13; //Should be an even number for tiles on the ground// Bigger than 7 will make things... slow //Has issues when below 6
+int numberoflevels =12; //Should be an even number for tiles on the ground// Bigger than 7 will make things... slow //Has issues when below 6
 int numberofbranches = 2;
 //Note, this is (numberofbranches)^(numberoflevels+1)... This should be kept under 20000 or so... e.g... 2^14, 3^9, 4^7, 5^6
 int fftbands = (int) pow(2, numberoflevels+1); //NOTE This is a 3 when in 3d, and a 2 in 2d...
@@ -47,7 +47,7 @@ int angle_index;
 int color_index;
 
 branch b_root; //Treeroot
-//branch b_root_2;
+branch b_root_2;
 
 //3D STUFF!
 float thetaSpeed = .01f;
@@ -56,23 +56,23 @@ float currentTheta;
 void setup() {
   size(1600, 900, P3D); //NOW IN 3D!!! //CAREFUL, Not what height is being done and stuff! Not everything supports 3d!
   background(0);
-  ambientLight(120,120,120);
+  ambientLight(120, 120, 120);
   createGUI();
-  
+
   surface.setResizable(true);
   minim = new Minim(this);
   b_root = new branch(null, 0, 0);
-  //b_root_2 = new branch(null, 0, 0);
+  b_root_2 = new branch(null, 0, 0);
   newsession = true;
   currentTheta = 0;
-  
+
   //camera(mouseX, height/2, (height/2) / tan(PI/6), width/2, height/2, 0, 0, 1, 0);
 
   if (newsession) {
     //Chooses Music File
     JFileChooser chooser = new JFileChooser(sketchPath(""));
 
-    FileNameExtensionFilter filter = new FileNameExtensionFilter("MP3 Files only please","mp3");
+    FileNameExtensionFilter filter = new FileNameExtensionFilter("MP3 Files only please", "mp3");
     chooser.setFileFilter(filter);
     int returnValue = chooser.showOpenDialog(null);
     if (returnValue == JFileChooser.APPROVE_OPTION) {
@@ -89,14 +89,14 @@ void setup() {
 }
 
 void draw() {
-  if(widthh != width){
-   createGUI();
-   widthh = width;
-   heightt = height;
+  if (widthh != width) {
+    createGUI();
+    widthh = width;
+    heightt = height;
   }
   background(0);
-  frameRate(60);
-  
+  frameRate(144);
+
   fft.forward(song.mix); //step the fft to the next song frame
 
   branch_heights(); //Calculate all branch heights
@@ -106,10 +106,10 @@ void draw() {
   branch_colors(); //Calculates all branch colors
 
   translate(0, 0, 0);
-  //tests(); // generates all testing stuff
+  tests(); // generates all testing stuff
 
   // Start the tree from the bottom of the screen
-  translate(width/2, (3*height)/4, -100); // -Z = depth
+  translate(width/2, (2*height)/4, -100); // -Z = depth
 
   currentTheta += thetaSpeed; //Slowly rotate the entire screen
   rotateY(currentTheta);
@@ -117,46 +117,27 @@ void draw() {
   pushMatrix();
   b_root.draw_branch();
   popMatrix();
-  
+
+  pushMatrix();
+  rotateZ(PI);
+  b_root_2.draw_branch();
+  popMatrix();
+
   //TILE Generation we should make this more fancy with matricies or something idk dude
-  int number_of_tiles = numberoflevels + 1; //How many tiles are on the ground
-  float tile_size = 70;
-  noFill();//i only want the outline of the rectangles
-  for (int x = -number_of_tiles/2; x < number_of_tiles/2; x++) {
-    for (int y = -number_of_tiles/2; y < number_of_tiles/2; y++) {
-      //run two for loops, cycling through 10 different positions of rectangles
-      pushMatrix();
-      
-      //color k = get_color(heights2[(int) ((sqrt(x*x + y*y) )/2)], 255 - (255 / (number_of_tiles))* abs(sqrt(x*x + y*y)/2));
-      color k = get_color(heights2[0]);
-      stroke(k);
-      
-      //uncomment the next line:
-      //stroke(0,255,0);
-      // to see how the infinity thing works
-      
-      translate(x*tile_size, 0, y*tile_size);//move the rectangles to where they shall be
-      rotateX(HALF_PI);
-      rect(0, 0, tile_size, tile_size);
-      popMatrix();
-    }
-    
-    if(!song.isPlaying()){
-      newsession = true;
-    }
+  //generate_tiles();
+
+  if (!song.isPlaying()) {
+    newsession = true;
   }
-  
-  
-  
 }
+
 //return a value that will increase proportionally to interesting data in the fft spectrum.
 int get_displaced(int current) {
   //float k = fftbands/numberoflevels;
   //return (int) k*current;
-  
+
   float ln_fft = log(fftbands); 
-  return (int) pow(BASE, (float) ((float)current/ (float)numberoflevels)*(ln_fft)/log(BASE)) -1; 
-  
+  return ((int)pow(BASE, (float) ((float)(current)/ (float)numberoflevels)*(ln_fft)/log(BASE)));
 }
 color random_color() {
   return color((int) random(0, 255), (int) random(0, 255), (int) random(0, 255));
@@ -165,24 +146,25 @@ color get_color(double freq) {
   freq = freq/COLORFREQDIVISOR;
   return color((int) (Math.sin(freq)* 127 + 128), (int) (Math.sin(freq+((2*Math.PI)/2)) * 127 + 128), (int) (Math.sin(freq+(Math.PI/2)) * 127 + 128));
 }
-color get_color(double freq, float alpha){
+color get_color(double freq, float alpha) {
   freq = freq/COLORFREQDIVISOR;
   return color((int) (Math.sin(freq)* 127 + 128), (int) (Math.sin(freq+((2*Math.PI)/2)) * 127 + 128), (int) (Math.sin(freq+(Math.PI/2)) * 127 + 128), alpha);
 }
 
 void branch_colors() {
   for (int i = 0; i < heights2.length; i++) {
-    colors[i] = get_color(heights2[i] , 200f);
+    colors[i] = get_color(heights2[i], 200f);
   }
   b_root.set_colors(colors);
-  //b_root_2.set_colors(colors);
+  b_root_2.set_colors(colors);
 }
 
 void branch_angles() {
-  for (int i = heights2.length -1; i > 0 ; i--) {
+  for (int i = heights2.length -1; i > 0; i--) {
     angles[i] = radians(ANGLEMULTIPLIER*heights2[i]);
   }
   b_root.set_angles(angles);
+  b_root_2.set_angles(angles);
 }
 
 void branch_heights() {
@@ -221,7 +203,7 @@ void branch_heights() {
      */
   }
   b_root.set_height_by_id(heights2);
-  //b_root_2.set_height_by_id(heights2);
+  b_root_2.set_height_by_id(heights2);
 
   //b_root.set_height(heights2, heights, 0, fftbands);
 }
@@ -233,6 +215,7 @@ void tests() { //Testing Space
     fill(140, 140, 140, 50);
     rectMode(CORNERS);
     rect( ((float) width/heights.length)*  get_displaced(i), height, ((float) width/heights.length)*  get_displaced(i+1), height-heights2[i]); //Displays how get_displaced currently scanes the fft groups...May or maynot be aligned to individual spectrum?
+    println(get_displaced(i) +" "+ heights.length);
   }
 
   for (int i = 0; i < heights.length; i++) {
@@ -247,4 +230,29 @@ void tests() { //Testing Space
    }
    }
    */
+}
+
+void generate_tiles() {
+  int number_of_tiles = numberoflevels + 1; //How many tiles are on the ground
+  float tile_size = 70;
+  noFill();//i only want the outline of the rectangles
+  for (int x = -number_of_tiles/2; x < number_of_tiles/2; x++) {
+    for (int y = -number_of_tiles/2; y < number_of_tiles/2; y++) {
+      //run two for loops, cycling through 10 different positions of rectangles
+      pushMatrix();
+
+      //color k = get_color(heights2[(int) ((sqrt(x*x + y*y) )/2)], 255 - (255 / (number_of_tiles))* abs(sqrt(x*x + y*y)/2));
+      color k = get_color(heights2[0]);
+      stroke(k);
+
+      //uncomment the next line:
+      //stroke(0,255,0);
+      // to see how the infinity thing works
+
+      translate(x*tile_size, 0, y*tile_size);//move the rectangles to where they shall be
+      rotateX(HALF_PI);
+      rect(0, 0, tile_size, tile_size);
+      popMatrix();
+    }
+  }
 }

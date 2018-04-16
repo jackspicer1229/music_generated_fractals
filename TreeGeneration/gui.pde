@@ -125,7 +125,7 @@ public void createGUI(){
   BASESlider = new GSlider(this, 0, 190, 150, 10, 10.0);
   BASESlider.setShowValue(true);
   BASESlider.setShowLimits(true);
-  BASESlider.setLimits(2.7, 1.0, 20.0);
+  BASESlider.setLimits(2.7, 1.1, 20.0);
   BASESlider.setShowTicks(true);
   BASESlider.setNumberFormat(G4P.DECIMAL, 2);
   BASESlider.setOpaque(false);
